@@ -1,0 +1,17 @@
+# API credentials
+region: IAD
+pyrax_creds_file: ~/.rackspace_cloud_credentials
+
+server_flavor: performance1-1
+server_image: 055143e8-2da9-439a-a52d-8063f845dec6 # Ubuntu 15.04 (PVHVM)
+server_keypair: ansible_prov_1
+
+magento_version: 1.9.1.1
+
+# DB
+db_user: magento
+db_password: magento
+db_name: magento
+db_instance_name: prod_db
+db_flavor: 3
+db_volume: 5
