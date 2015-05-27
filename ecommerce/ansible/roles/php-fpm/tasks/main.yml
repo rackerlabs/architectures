@@ -5,6 +5,7 @@
     - php5
     - php5-fpm
     - php5-mysql
+    - php5-mcrypt
     - php5-gd
 
 - name: Disable default pool

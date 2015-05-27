@@ -41,7 +41,7 @@
             <default_setup>
                 <connection>
                     <host>{{ db_host }}</host>
-                    <username>{{ db_username }}</username>
+                    <username>{{ db_user }}</username>
                     <password>{{ db_password}}</password>
                     <dbname>{{ db_name }}</dbname>
                     <initStatements>SET NAMES utf8</initStatements>
