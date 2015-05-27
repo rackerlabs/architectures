@@ -1,0 +1,13 @@
+---
+- name: Download Magento
+  get_url: url=https://www.magentocommerce.com/downloads/assets/{{ magento_version }}/magento-{{ magento_version }}.tar.gz dest=/srv/magento-{{ magento_version }}.tar.gz
+           sha256sum="{{ magento_sha }}"
+
+- name: Extract archive
+  command: chdir=/srv /bin/tar xvf magento-{{ magento_version }}.tar.gz creates=/srv/magento
+
+- name: Copy Magento config file
+  template: src=local.xml dest=/srv/magento/app/etc
+
+- name: Change ownership of directory
+  file: path=/srv/magento owner=www-data group=www-data state=directory recurse=yes

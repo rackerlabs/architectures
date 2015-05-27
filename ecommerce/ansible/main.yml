@@ -1,0 +1,8 @@
+tasks:
+
+  - name: Generate random Magento key
+    shell: /usr/bin/openssl rand -base64 32
+    register: key_result
+
+roles:
+  - { role: magento, magento_key: key_result }
