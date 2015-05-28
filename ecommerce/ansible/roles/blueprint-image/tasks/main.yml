@@ -1,0 +1,13 @@
+---
+- name: Create server image
+  command: python {{ role_path }}/files/create_image.py
+  tags: create-image
+
+- name: Delete server
+  rax:
+    credentials: "{{ pyrax_creds_file }}"
+    region: "{{ region }}"
+    image: "{{ server_image }}"
+    flavor: "{{ server_flavor }}"
+    name: "blueprint"
+    state: absent
