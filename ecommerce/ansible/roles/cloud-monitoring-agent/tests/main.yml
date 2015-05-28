@@ -1,0 +1,9 @@
+---
+- hosts: localhost
+  connection: local
+  vars:
+    cloud_monitoring_additional_checks:
+      - disk
+      - network
+  roles:
+    - Rackspace_Automation.cloud-monitoring-agent

@@ -1,0 +1,29 @@
+---
+# tasks file for cloud-monitoring-agent
+- include: Debian.yml
+  when: ansible_os_family == 'Debian'
+
+- include: RedHat.yml
+  when: ansible_os_family == 'RedHat'
+
+- include: unsupported_os.yml
+  when: base_supported_os is not defined
+
+- name: setup the monitoring agent
+  command: rackspace-monitoring-agent --setup --username {{ rackspace_username }} --apikey {{ rackspace_apikey }} creates=/etc/rackspace-monitoring-agent.cfg
+  when: not cloud_monitoring_agent_force_setup
+
+- name: force setup of the monitoring agent
+  command: rackspace-monitoring-agent --setup --username {{ rackspace_username }} --apikey {{ rackspace_apikey }}
+  when: cloud_monitoring_agent_force_setup
+
+- name: ensure agent is started
+  service: name=rackspace-monitoring-agent state=started enabled=yes
+
+- name: ensure the conf.d directory exists
+  file: path=/etc/rackspace-monitoring-agent.conf.d state=directory owner=root group=root mode=0755
+
+- name: configure checks and alarms
+  template: src={{ item }}.yaml.j2 dest=/etc/rackspace-monitoring-agent.conf.d/{{ item }}.yaml owner=root group=root mode=0644
+  with_items: cloud_monitoring_default_checks| union(cloud_monitoring_additional_checks) | list
+  notify: restart monitoring agent

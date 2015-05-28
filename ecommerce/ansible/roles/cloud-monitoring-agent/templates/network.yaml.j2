@@ -1,0 +1,32 @@
+type: agent.network
+label: Network check on {{ cloud_monitoring_network_target | default("eth0") }}
+disabled: false
+period: {{ cloud_monitoring_network_period | default(60) }}
+timeout: {{ cloud_monitoring_network_timeout | default(30) }}
+details:
+  target: {{ cloud_monitoring_network_target | default("eth0") }}
+{% if cloud_monitoring_network_alarm == True %}
+alarms:
+    alarm-network-receive:
+        label: Network receive rate on {{ cloud_monitoring_network_target | default("etho") }}
+        notification_plan_id: {{ notification_plan_id }}
+        criteria: |
+            if (rate(metric['rx_bytes']) > {{ cloud_monitoring_network_receive_critical }}) {
+              return new AlarmStatus(CRITICAL, "Network receive rate on {{ cloud_monitoring_network_target | default("etho") }} is above your critical threshold of {{ cloud_monitoring_network_receive_critical }}B/s");
+            }
+            if (rate(metric['rx_bytes']) > {{ cloud_monitoring_network_receive_warning }}) {
+              return new AlarmStatus(WARNING, "Network receive rate on {{ cloud_monitoring_network_target | default("etho") }} is above your warning threshold of {{ cloud_monitoring_network_receive_warning }}B/s");
+            }
+            return new AlarmStatus(OK, "Network receive rate on {{ cloud_monitoring_network_target | default("etho") }} is below your warning threshold of {{ cloud_monitoring_network_receive_warning }}B/s");
+    alarm-network-transmit:
+        label: Network transmit rate on  {{ cloud_monitoring_network_target | default("etho") }}
+        notification_plan_id: {{ notification_plan_id }}
+        criteria: |
+            if (rate(metric['tx_bytes']) > {{ cloud_monitoring_network_transmit_critical }}) {
+              return new AlarmStatus(CRITICAL, "Network transmit rate on {{ cloud_monitoring_network_target | default("etho") }} is above your critical threshold of {{ cloud_monitoring_network_transmit_critical }}B/s");
+            }
+            if (rate(metric['tx_bytes']) > {{ cloud_monitoring_network_transmit_warning }}) {
+              return new AlarmStatus(WARNING, "Network transmit rate on {{ cloud_monitoring_network_target | default("etho") }} is above your warning threshold of {{ cloud_monitoring_network_transmit_warning }}B/s");
+            }
+            return new AlarmStatus(OK, "Network transmit rate on {{ cloud_monitoring_network_target | default("etho") }} is below your warning threshold of {{ cloud_monitoring_network_transmit_warning }}B/s");
+{% endif %}

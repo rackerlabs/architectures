@@ -1,0 +1,19 @@
+type: agent.cpu
+label: CPU
+disabled: false
+period: {{ cloud_monitoring_cpu_period | default(60) }}
+timeout: {{ cloud_monitoring_cpu_timeout | default(30) }}
+{% if cloud_monitoring_cpu_alarm == True %}
+alarms:
+    alarm-cpu:
+        label: CPU Usage
+        notification_plan_id: {{ notification_plan_id }}
+        criteria: |
+            if (metric['usage_average'] > 95) {
+              return new AlarmStatus(CRITICAL, 'CPU usage is #{usage_average}%, above your critical threshold of 95%');
+            }
+            if (metric['usage_average'] > 90) {
+              return new AlarmStatus(WARNING, 'CPU usage is #{usage_average}%, above your warning threshold of 90%');
+            }
+            return new AlarmStatus(OK, 'CPU usage is #{usage_average}%, below your warning threshold of 90%');
+{% endif %}
