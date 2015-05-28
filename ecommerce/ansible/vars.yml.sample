@@ -1,6 +1,6 @@
 # API credentials
-username: jamiehannaford1
-api_key: b5e6c38e5794460ebc0a85b957ef49c8
+username:
+api_key:
 region: IAD
 pyrax_creds_file: ~/.rackspace_cloud_credentials
 

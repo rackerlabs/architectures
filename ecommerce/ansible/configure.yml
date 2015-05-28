@@ -69,7 +69,17 @@
   remote_user: root
   vars_files:
     - vars.yml
+  vars:
+    rackspace_username: "{{ username }}"
+    rackspace_apikey: "{{ api_key }}"
+    cloud_monitoring_agent_force_setup: True
+    cloud_monitoring_filesystem_alarm: True
+    cloud_monitoring_cpu_alarm: True
+    cloud_monitoring_memory_alarm: True
+    cloud_monitoring_load_alarm: True
+    notification_plan_id: "{{ lookup('file', 'roles/arch-deploy/files/.np_id') }}"
   roles:
+    - { role: cloud-monitoring-agent, tags: ['monitoring'] }
     - { role: nginx, server_hostname: "{{ hostvars.localhost.rax_blueprint.instances[0].rax_accessipv4 }}" }
     - { role: php-fpm }
     - { role: magento, magento_key: "{{ hostvars.localhost.key_result.stdout_lines }}", db_host: "{{ hostvars.localhost.cdb.cdb.hostname }}" }
