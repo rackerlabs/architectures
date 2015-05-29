@@ -6,5 +6,5 @@
   vars_files:
     - vars.yml
   roles:
-#    - blueprint-image
+    - blueprint-image
     - arch-deploy
