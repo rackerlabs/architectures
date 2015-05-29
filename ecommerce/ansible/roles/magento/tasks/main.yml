@@ -1,9 +1,49 @@
 ---
+- name: Install Turbolift dependencies
+  apt: name={{ item }} state=present
+  with_items:
+    - git
+    - python-dev
+    - python-setuptools
+
+- name: Clone Turbolift repository
+  command: git clone git://github.com/cloudnull/turbolift.git
+
+- name: Install Turbolift
+  command: chdir=/root/turbolift python setup.py install
+
 - name: Download Magento
   get_url: url=https://www.magentocommerce.com/downloads/assets/{{ magento_version }}/magento-{{ magento_version }}.tar.gz dest=/srv/magento-{{ magento_version }}.tar.gz
 
-- name: Extract archive
+- name: Download Sample
+  get_url: url=http://www.magentocommerce.com/downloads/assets/{{ magento_version }}/magento-sample-data-{{ magento_version }}.tar.gz dest=/srv/magento-sample-data-{{ magento_version }}.tar.gz
+  when: sample_data == 'install'
+
+- name: Extract Magento archive
   command: chdir=/srv /bin/tar xvf magento-{{ magento_version }}.tar.gz creates=/srv/magento
+
+- name: Extract Sample archive
+  command: chdir=/srv /bin/tar xvf magento-sample-data-{{ magento_version }}.tar.gz creates=/srv/magento-sample-data-{{ magento_version }}
+  when: sample_data == 'install'
+
+- name: Move media directory to Cloud Files
+  command: >
+    chdir=/srv/magento-sample-data-{{ magento_version }}/media
+    turbolift -u {{ username }} -a {{ api_key }} --os-rax-auth {{ region|lowercase }} upload -s . -c media
+  when: sample_data == 'install'
+
+- name: Move skin directory to Cloud Files
+  command: >
+    chdir=/srv/magento-sample-data-{{ magento_version }}/skin
+    turbolift -u {{ username }} -a {{ api_key }} --os-rax-auth {{ region|lowercase }} upload -s . -c skin
+  when: sample_data == 'install'
+
+- name: Import SQLdump
+  shell: mysql -u {{ db_user }} -p{{ db_password }} -h {{ db_host }} {{ db_name }} < /srv/magento-sample-data-{{ magento_version }}/magento_sample_data_for_{{ magento_version }}.sql
+  when: sample_data == 'install'
+
+- name: Remove samples
+  shell: chdir=/srv rm -rf magento-sample-data-{{ magento_version }}*
 
 - name: Copy Magento config file
   template: src=local.xml dest=/srv/magento/app/etc

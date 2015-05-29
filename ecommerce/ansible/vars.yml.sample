@@ -10,8 +10,13 @@ server_image: 055143e8-2da9-439a-a52d-8063f845dec6 # Ubuntu 15.04 (PVHVM)
 server_keypair: ansible_prov_1
 server_name: magento_node
 
+# Redis config
+redis_flavor: performance1-8
+redis_image: 055143e8-2da9-439a-a52d-8063f845dec6 # Ubuntu 15.04 (PVHVM)
+
 # Magento
-magento_version: 1.9.1.1
+magento_version: 1.9.1.0
+sample_data: none  # set to 'none' or 'install'
 
 # DB
 db_user: magento
