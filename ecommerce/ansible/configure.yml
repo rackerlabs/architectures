@@ -1,5 +1,19 @@
 ---
-- name: Deploy magento
+- name: Generating random hashes
+  hosts: local
+  connection: local
+  gather_facts: False
+  tasks:
+
+    - name: Generate random Magento key
+      shell: /usr/bin/openssl rand -base64 32
+      register: magento_key_result
+
+    - name: Generate random Redis key
+      shell: /usr/bin/openssl rand -base64 32
+      register: redis_key_result
+
+- name: Deploy initial infrastructure
   hosts: local
   connection: local
   gather_facts: False
@@ -7,7 +21,7 @@
     - vars.yml
   tasks:
 
-    - name: Provision server
+    - name: Provision blueprint server
       rax:
         credentials: "{{ pyrax_creds_file }}"
         region: "{{ region }}"
@@ -21,11 +35,33 @@
         group: blueprint
       register: rax_blueprint
 
-    - name: Add server to host
+    - name: Add blueprint server to host
       add_host:
         hostname: "{{ item.name }}"
         ansible_ssh_host: "{{ item.rax_accessipv4 }}"
         groupname: blueprint
+      with_items: rax_blueprint.success
+      when: rax_blueprint.action == 'create'
+
+    - name: Provision Redis server
+      rax:
+        credentials: "{{ pyrax_creds_file }}"
+        region: "{{ region }}"
+        name: redis
+        auto_increment: no
+        flavor: "{{ redis_flavor }}"
+        image: "{{ redis_image }}"
+        key_name: "{{ server_keypair }}"
+        wait: yes
+        state: present
+        group: redis
+      register: rax_redis
+
+    - name: Add Redis server to host
+      add_host:
+        hostname: "{{ item.name }}"
+        ansible_ssh_host: "{{ item.rax_accessipv4 }}"
+        groupname: redis
       with_items: rax_blueprint.success
       when: rax_blueprint.action == 'create'
 
@@ -60,16 +96,25 @@
         databases: ["{{ db_name }}"]
       tags: database
 
-    - name: Generate random Magento key
-      shell: /usr/bin/openssl rand -base64 32
-      register: key_result
+- name: Deploy Redis
+  hosts: redis
+  remote_user: root
+  vars:
+    - redis_password: "{{ hostvars.localhost.redis_key_result.stdout_lines[0] }}"
+    - redis_bind: 127.0.0.1
+  roles:
+    - { role: redis }
 
 - name: Setup server
   hosts: blueprint
   remote_user: root
+  vars:
+    - server_hostname: "{{ hostvars.localhost.rax_blueprint.instances[0].rax_accessipv4 }}"
+    - magento_key: "{{ hostvars.localhost.magento_key_result.stdout_lines[0] }}"
+    - db_host: "{{ hostvars.localhost.cdb.cdb.hostname }}"
   vars_files:
     - vars.yml
   roles:
-    - { role: nginx, server_hostname: "{{ hostvars.localhost.rax_blueprint.instances[0].rax_accessipv4 }}" }
+    - { role: nginx }
     - { role: php-fpm }
-    - { role: magento, magento_key: "{{ hostvars.localhost.key_result.stdout_lines }}", db_host: "{{ hostvars.localhost.cdb.cdb.hostname }}" }
+    - { role: magento }
