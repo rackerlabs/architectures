@@ -1,0 +1,15 @@
+type: agent.disk
+label: Disk check on {{ cloud_monitoring_disk_target | default("/") }}
+disabled: false
+period: {{ cloud_monitoring_disk_period | default(60) }}
+timeout: {{ cloud_monitoring_disk_timeout | default(30) }}
+details:
+  target: {{ cloud_monitoring_disk_target | default("/dev/xvda1") }}
+{% if cloud_monitoring_disk_alarm == True %}
+alarms:
+    alarm-disk:
+        label: usage on {{ cloud_monitoring_disk_target | default("/dev/xvda1") }}
+        notification_plan_id: {{ notification_plan_id }}
+        criteria: |
+            {{ cloud_monitoring_disk_alarm_criteria | default("") }}
+{% endif %}

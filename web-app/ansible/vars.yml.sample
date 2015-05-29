@@ -1,4 +1,6 @@
 # API credentials
+username:
+api_key:
 region: IAD
 pyrax_creds_file: ~/.rackspace_cloud_credentials
 

@@ -1,0 +1,20 @@
+type: agent.filesystem
+label: Filesystem check on {{ cloud_monitoring_filesystem_target | default("/") }}
+disabled: false
+period: {{ cloud_monitoring_filesystem_period | default(60) }}
+timeout: {{ cloud_monitoring_filesystem_timeout | default(30) }}
+details:
+  target: {{ cloud_monitoring_filesystem_target | default("/") }}
+{% if cloud_monitoring_filesystem_alarm == True %}
+alarms:
+    alarm-disk-size:
+        label: usage on {{ cloud_monitoring_filesystem_target | default("/") }}
+        notification_plan_id: {{ notification_plan_id }}
+        criteria: |
+            if (percentage(metric['used'], metric['total']) > 90) {
+                return new AlarmStatus(CRITICAL, 'Disk usage is above 90%, #{used} out of #{total}');
+            }
+            if (percentage(metric['used'], metric['total']) > 80) {
+                return new AlarmStatus(WARNING, 'Disk usage is above 80%, #{used} out of #{total}');
+            }
+{% endif %}

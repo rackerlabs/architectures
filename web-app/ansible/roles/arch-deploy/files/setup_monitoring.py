@@ -24,13 +24,13 @@ for o, a in opts:
     elif o in ('-d', '--down'):
         down_policy_id = a
 
-yml = yaml.load(open('creds.yml'))
+yml = yaml.load(open('vars.yml'))
 
 pyrax.set_setting("identity_type", "rackspace")
 pyrax.set_credentials(yml['username'], yml['api_key'])
 
 cm = pyrax.cloud_monitoring
-au = pyrax.connect_to_autoscale(region="IAD")
+au = pyrax.connect_to_autoscale(region=yml['region'])
 
 policy = au.get(group_id)
 

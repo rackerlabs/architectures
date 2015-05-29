@@ -1,13 +1,11 @@
 import pyrax
 import yaml
 import sys
-import os
 
 config_yml = yaml.load(open("vars.yml"))
-creds_file = os.path.expanduser("~/.rackspace_cloud_credentials")
 
 pyrax.set_setting("identity_type", "rackspace")
-pyrax.set_credential_file(creds_file)
+pyrax.set_credentials(config_yml['username'], config_yml['api_key'])
 
 region = config_yml["region"] if config_yml["region"] else "IAD"
 cs = pyrax.connect_to_cloudservers(region=region)

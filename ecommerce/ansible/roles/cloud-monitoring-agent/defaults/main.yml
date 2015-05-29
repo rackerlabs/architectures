@@ -1,0 +1,23 @@
+---
+# defaults file for cloud-monitoring-agent
+cloud_monitoring_agent_force_setup: False
+cloud_monitoring_default_checks:
+  - filesystem
+  - memory
+  - cpu
+  - load
+cloud_monitoring_additional_checks: []
+
+cloud_monitoring_filesystem_alarm: False
+cloud_monitoring_memory_alarm: False
+cloud_monitoring_cpu_alarm: False
+cloud_monitoring_load_alarm: False
+cloud_monitoring_network_alarm: False
+cloud_monitoring_disk_alarm: False
+
+cloud_monitoring_network_receive_critical: 76000
+cloud_monitoring_network_receive_warning: 56000
+cloud_monitoring_network_transmit_critical: 76000
+cloud_monitoring_network_transmit_warning: 56000
+
+notification_plan_id: npTechnicalContactsEmail
