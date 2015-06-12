@@ -14,6 +14,7 @@
 
 - name: Copy WordPress config file
   template: src=wp-config.php dest=/var/www/wordpress/
+  ignore_errors: True
 
 - name: Change ownership of WordPress installation
   file: path=/var/www/wordpress/ owner=www-data group=www-data state=directory recurse=yes
