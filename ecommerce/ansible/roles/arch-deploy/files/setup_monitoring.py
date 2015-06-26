@@ -4,7 +4,7 @@ import sys
 import os
 import yaml
 
-output_file = ".np_id"
+output_file = "roles/arch-deploy/files/.np_id"
 
 try:
     opts, args = getopt.getopt(sys.argv[1:], "gud", ["group=", "up=", "down="])
