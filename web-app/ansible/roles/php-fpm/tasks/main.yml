@@ -1,5 +1,5 @@
 ---
-- name: Install php-fpm and deps 
+- name: Install php-fpm and deps
   apt: name={{ item }} state=present
   with_items:
     - php5
@@ -10,7 +10,9 @@
 - name: Disable default pool
   command: mv /etc/php5/fpm/pool.d/www.conf /etc/php5/fpm/pool.d/www.disabled creates=/etc/php5/fpm/pool.d/www.disabled
   notify: restart php-fpm
- 
+
 - name: Copy php-fpm configuration
   template: src=wordpress.conf dest=/etc/php5/fpm/pool.d
   notify: restart php-fpm
+
+- pause: seconds=5

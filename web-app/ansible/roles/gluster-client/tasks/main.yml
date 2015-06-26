@@ -1,0 +1,25 @@
+---
+#- debug: var=gluster_servers
+
+- name: Install packages
+  apt: name=software-properties-common state=present
+
+- name: Add the GlusterFS PPA
+  command: add-apt-repository -y ppa:gluster/glusterfs-3.5
+
+- name: Update cache
+  apt: update_cache=yes
+  ignore_errors: yes
+
+- name: Install GlusterFS-server
+  apt: name=glusterfs-server state=present
+
+- name: Add hosts
+  lineinfile: dest=/etc/hosts line='{{ item.rax_addresses.web_gluster_nodes[0].addr }} {{ item.name }}'
+  with_items: gluster_servers.instances
+
+- lineinfile: dest=/etc/fstab line='gluster1:/gvol0 /mnt/gluster glusterfs defaults,_netdev 0 0'
+
+- command: mkdir -p /mnt/gluster
+
+- command: mount /mnt/gluster

@@ -5,7 +5,6 @@ period: {{ cloud_monitoring_network_period | default(60) }}
 timeout: {{ cloud_monitoring_network_timeout | default(30) }}
 details:
   target: {{ cloud_monitoring_network_target | default("eth0") }}
-{% if cloud_monitoring_network_alarm == True %}
 alarms:
     alarm-network-receive:
         label: Network receive rate on {{ cloud_monitoring_network_target | default("etho") }}
@@ -29,4 +28,3 @@ alarms:
               return new AlarmStatus(WARNING, "Network transmit rate on {{ cloud_monitoring_network_target | default("etho") }} is above your warning threshold of {{ cloud_monitoring_network_transmit_warning }}B/s");
             }
             return new AlarmStatus(OK, "Network transmit rate on {{ cloud_monitoring_network_target | default("etho") }} is below your warning threshold of {{ cloud_monitoring_network_transmit_warning }}B/s");
-{% endif %}

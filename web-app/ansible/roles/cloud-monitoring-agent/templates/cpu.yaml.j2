@@ -3,7 +3,6 @@ label: CPU
 disabled: false
 period: {{ cloud_monitoring_cpu_period | default(60) }}
 timeout: {{ cloud_monitoring_cpu_timeout | default(30) }}
-{% if cloud_monitoring_cpu_alarm == True %}
 alarms:
     alarm-cpu:
         label: CPU Usage
@@ -16,4 +15,3 @@ alarms:
               return new AlarmStatus(WARNING, 'CPU usage is #{usage_average}%, above your warning threshold of 90%');
             }
             return new AlarmStatus(OK, 'CPU usage is #{usage_average}%, below your warning threshold of 90%');
-{% endif %}

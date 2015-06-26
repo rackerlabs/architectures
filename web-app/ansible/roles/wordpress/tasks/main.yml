@@ -1,10 +1,10 @@
 ---
 - name: Download WordPress
-  get_url: url=http://wordpress.org/wordpress-{{ wp_version }}.tar.gz dest=/var/www/wordpress-{{ wp_version }}.tar.gz
+  get_url: url=https://wordpress.org/wordpress-{{ wp_version }}.tar.gz dest=/mnt/gluster/wordpress-{{ wp_version }}.tar.gz
            sha256sum="{{ wp_sha256sum }}"
 
 - name: Extract archive
-  command: chdir=/var/www /bin/tar xvf wordpress-{{ wp_version }}.tar.gz
+  command: chdir=/mnt/gluster /bin/tar xvf wordpress-{{ wp_version }}.tar.gz
 
 - name: Fetch random salts for WordPress config
   local_action: command curl https://api.wordpress.org/secret-key/1.1/salt/
@@ -13,8 +13,8 @@
   ignore_errors: True
 
 - name: Copy WordPress config file
-  template: src=wp-config.php dest=/var/www/wordpress/
+  template: src=wp-config.php dest=/mnt/gluster/wordpress/
   ignore_errors: True
 
 - name: Change ownership of WordPress installation
-  file: path=/var/www/wordpress/ owner=www-data group=www-data state=directory recurse=yes
+  file: path=/mnt/gluster/wordpress/ owner=www-data group=www-data state=directory recurse=yes

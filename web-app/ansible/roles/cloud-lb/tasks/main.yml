@@ -1,0 +1,15 @@
+---
+- name: Create Load Balancer
+  rax_clb:
+    credentials: "{{ pyrax_creds_file }}"
+    region: "{{ rs_region }}"
+    name: "{{ lb_name }}"
+    port: 80
+    protocol: HTTP
+    algorithm: ROUND_ROBIN
+    type: PUBLIC
+    timeout: 30
+    wait: yes
+    state: present
+  register: clb
+  tags: web_nodes

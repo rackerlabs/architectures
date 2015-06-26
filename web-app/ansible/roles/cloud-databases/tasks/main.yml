@@ -7,14 +7,14 @@
     volume: "{{ db_volume }}"
     state: present
     wait: yes
-    region: "{{ region }}"
+    region: "{{ rs_region }}"
   register: cdb
   tags: database
 
 - name: Create DB
   rax_cdb_database:
     credentials: "{{ pyrax_creds_file }}"
-    region: "{{ region }}"
+    region: "{{ rs_region }}"
     cdb_id: "{{ cdb.cdb.id }}"
     name: "{{ wp_db_name }}"
   register: wp_db
@@ -23,7 +23,7 @@
 - name: Create DB user
   rax_cdb_user:
     credentials: "{{ pyrax_creds_file }}"
-    region: "{{ region }}"
+    region: "{{ rs_region }}"
     cdb_id: "{{ cdb.cdb.id }}"
     db_username: "{{ wp_db_user }}"
     db_password: "{{ wp_db_password }}"

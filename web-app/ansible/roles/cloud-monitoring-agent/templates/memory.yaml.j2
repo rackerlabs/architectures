@@ -3,7 +3,6 @@ label: Memory
 disabled: false
 period: {{ cloud_monitoring_memory_period | default(60) }}
 timeout: {{ cloud_monitoring_memory_timeout | default(30) }}
-{% if cloud_monitoring_memory_alarm == True %}
 alarms:
     alarm-memory:
         label: Memory Usage
@@ -16,4 +15,3 @@ alarms:
               return new AlarmStatus(WARNING, "Memory usage is above your warning threshold of 80%");
             }
             return new AlarmStatus(OK, "Memory usage is below your warning threshold of 80%");
-{% endif %}

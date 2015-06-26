@@ -1,0 +1,179 @@
+---
+- name: Provision cloud resources
+  hosts: local
+  connection: local
+  gather_facts: True
+  vars_files:
+    - vars.yml
+  tasks:
+    - name: Provision servers
+      rax:
+        credentials: "{{ pyrax_creds_file }}"
+        name: "gluster"
+        flavor: "{{ server_flavor }}"
+        image: "{{ server_image }}"
+        key_name: "{{ server_keypair }}"
+        state: present
+        count: 2
+        exact_count: yes
+        group: gluster
+        wait: yes
+        networks:
+          - public
+          - private
+          - "{{ network.networks[0].id }}"
+        region: "{{ rs_region}}"
+      register: gluster_servers
+
+    - name: Add servers to host
+      add_host:
+        hostname: "{{ item.name }}"
+        ansible_ssh_host: "{{ item.rax_accessipv4 }}"
+        groupname: gluster
+      with_items: gluster_servers.success
+      when: gluster_servers.action == 'create'
+
+    - name: Create volume
+      rax_cbs:
+        credentials: "{{ pyrax_creds_file }}"
+        name: "{{ item.name }}-vol"
+        description: "Volume for {{ item.name }}"
+        size: 100
+        state: present
+        volume_type: SSD
+        wait: yes
+        region: "{{ rs_region}}"
+        meta:
+          server: "{{ item.id }}"
+      register: gluster_vols
+      with_items: gluster_servers.success
+      when: gluster_servers.action == 'create'
+
+    - name: Attach volume
+      rax_cbs_attachments:
+        credentials: "{{ pyrax_creds_file }}"
+        volume: "{{ item.volume.id }}"
+        server: "{{ item.volume.metadata.server }}"
+        device: /dev/xvde
+        region: "{{ rs_region}}"
+        wait: yes
+        state: present
+      register: gluster_attachment
+      with_items: gluster_vols.results
+      when: gluster_servers.action == 'create'
+
+- name: Provision cloud resources
+  hosts: gluster
+  remote_user: root
+  vars_files:
+    - vars.yml
+  tasks:
+    - name: Add hosts
+      lineinfile: dest=/etc/hosts line='{{ item.rax_addresses.web_gluster_nodes[0].addr }} {{ item.name }}'
+      with_items: hostvars.localhost.gluster_servers.instances
+
+    - name: Add IPTABLES rule
+      command: iptables -A INPUT -s 192.168.3.0/24 -j ACCEPT
+
+    - name: Update cache
+      apt: update_cache=yes
+      ignore_errors: yes
+
+    - name: Install packages
+      apt: name={{ item }} state=present
+      with_items:
+        - lvm2
+        - xfsprogs
+        - software-properties-common
+
+    - name: Add the GlusterFS PPA
+      command: add-apt-repository -y ppa:gluster/glusterfs-3.5
+
+    - name: Update cache
+      apt: update_cache=yes
+      ignore_errors: yes
+
+    - name: Install GlusterFS-server
+      apt: name=glusterfs-server state=present
+
+    - name: Ensure gluster* packages are filtered out of automatic updates
+      command: apt-mark hold glusterfs*
+
+- name: Provision cloud resources
+  hosts: gluster
+  remote_user: root
+  vars_files:
+    - vars.yml
+  tasks:
+    - stat: path=/var/lib/gvol0
+      register: stat_result
+
+    - command: parted -s -- /dev/xvde mktable gpt
+      when: stat_result.stat.exists == False
+
+    - command: parted -s -- /dev/xvde mkpart primary 2048s 100%
+      when: stat_result.stat.exists == False
+
+    - command: parted -s -- /dev/xvde set 1 lvm on
+      when: stat_result.stat.exists == False
+
+    - command: pvcreate /dev/xvde1
+      when: stat_result.stat.exists == False
+
+    - command: vgcreate vgglus1 /dev/xvde1
+      when: stat_result.stat.exists == False
+
+    - command: lvcreate -l 100%VG -n gbrick1 vgglus1
+      when: stat_result.stat.exists == False
+
+    - command: mkfs.xfs -i size=512 /dev/vgglus1/gbrick1
+      when: stat_result.stat.exists == False
+
+    - lineinfile: dest=/etc/fstab line='/dev/vgglus1/gbrick1 /var/lib/gvol0 xfs inode64,nobarrier 0 0'
+      when: stat_result.stat.exists == False
+
+    - command: mkdir /var/lib/gvol0
+      when: stat_result.stat.exists == False
+
+    - command: mount /var/lib/gvol0
+      when: stat_result.stat.exists == False
+
+    - command: mkdir /var/lib/gvol0/brick"{{ ansible_hostname | regex_replace('gluster', '') }}"
+      when: stat_result.stat.exists == False
+
+    - command: gluster peer probe gluster2
+      when: ansible_hostname == "gluster1"
+
+    - command: gluster peer probe gluster1
+      when: ansible_hostname == "gluster2"
+
+- name: Provision cloud resources
+  hosts: gluster1
+  remote_user: root
+  vars_files:
+    - vars.yml
+  tasks:
+    - command: gluster volume list
+      register: gluster_vols_result
+
+    - name: Create GlusterFS vol
+      command: gluster volume create gvol0 replica 2 transport tcp gluster1:/var/lib/gvol0/brick1 gluster2:/var/lib/gvol0/brick2
+      when: gluster_vols_result.stdout.find('gvol0') == -1
+
+    - command: gluster volume set gvol0 auth.allow 192.168.3.*
+      when: gluster_vols_result.stdout.find('gvol0') == -1
+
+    - command: gluster volume set gvol0 nfs.disable off
+      when: gluster_vols_result.stdout.find('gvol0') == -1
+
+    - command: gluster volume set gvol0 nfs.addr-namelookup off
+      when: gluster_vols_result.stdout.find('gvol0') == -1
+
+    - command: gluster volume set gvol0 nfs.export-volumes on
+      when: gluster_vols_result.stdout.find('gvol0') == -1
+
+    - command: gluster volume set gvol0 nfs.rpc-auth-allow 192.168.3.*
+      when: gluster_vols_result.stdout.find('gvol0') == -1
+
+    - command: gluster volume start gvol0
+      when: gluster_vols_result.stdout.find('gvol0') == -1

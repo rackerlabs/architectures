@@ -1,10 +1,58 @@
 ---
-- name: Deploy web architecture
+- name: Provision private network
+  hosts: local
+  connection: local
+  gather_facts: False
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+  vars_files:
+    - vars.yml
+  roles:
+    - { role: cloud-networks, tags: ['cloud-networks'] }
+
+- { include: glusterfs.yml, tags: ['gluster-servers'] }
+
+- name: Provision cloud resources
+  hosts: local
+  connection: local
+  gather_facts: False
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+  vars_files:
+    - vars.yml
+  roles:
+    - { role: cloud-files, tags: ['cloud-files'] }
+    - { role: cloud-lb, tags: ['cloud-lb'] }
+    - { role: blueprint-deploy, tags: ['blueprint-deploy'] }
+    - { role: cloud-databases, tags: ['cloud-databases'] }
+
+- name: Configure blueprint server
+  hosts: blueprint
+  remote_user: root
+  vars_files:
+    - vars.yml
+    - creds.yml
+  vars:
+    rackspace_username: "{{ username }}"
+    rackspace_apikey: "{{ api_key }}"
+    notification_plan_id: "{{ lookup('file', 'files/.np_id') }}"
+    wp_db_host: "{{ hostvars.localhost.cdb.cdb.hostname }}"
+    gluster_servers: "{{ hostvars.localhost.gluster_servers }}"
+    server_hostname: "{{ dns_domain }}"
+  roles:
+    - { role: cloud-monitoring-agent, tags: ['blueprint-configure', 'monitoring'] }
+    - { role: gluster-client, tags: ['blueprint-configure', 'gluster-client'] }
+    - { role: wordpress, tags: ['blueprint-configure', 'wordpress'] }
+    - { role: nginx, tags: ['blueprint-configure', 'nginx'] }
+    - { role: php-fpm, tags: ['blueprint-configure', 'php-fpm'] }
+
+- name: Create "golden image", set up Auto Scale and DNS
   hosts: local
   connection: local
   gather_facts: False
   vars_files:
     - vars.yml
   roles:
-    - blueprint-image
-    - arch-deploy
+    - { role: blueprint-image, tags: ['blueprint-image'] }
+    - { role: auto-scale, tags: ['auto-scale'] }
+    - { role: cloud-dns, tags: ['cloud-dns'] }

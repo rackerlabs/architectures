@@ -1,21 +1,27 @@
 ---
-# tasks file for cloud-monitoring-agent
-- include: Debian.yml
-  when: ansible_os_family == 'Debian'
+- name: Debian | Supported OS
+  set_fact:
+    base_supported_os: True
 
-- include: RedHat.yml
-  when: ansible_os_family == 'RedHat'
+- name: Debian | setup monitoring agent apt key
+  apt_key: id=D05AB914 url='https://monitoring.api.rackspacecloud.com/pki/agent/linux.asc' state=present
+
+- name: Ubuntu | setup monitoring agent apt repository
+  apt_repository: repo='deb http://stable.packages.cloudmonitoring.rackspace.com/{{ ansible_distribution | lower }}-{{ ansible_distribution_version }}-x86_64 cloudmonitoring main' state=present
+  when: ansible_distribution == "Ubuntu"
+
+- name: Debian | setup monitoring agent apt repository
+  apt_repository: repo='deb http://stable.packages.cloudmonitoring.rackspace.com/{{ ansible_distribution | lower }}-{{ ansible_distribution_release }}-x86_64 cloudmonitoring main' state=present
+  when: ansible_distribution == "Debian"
+
+- name: Debian | install monitoring agent
+  apt: name=rackspace-monitoring-agent state=present update_cache=yes cache_valid_time=86400
 
 - include: unsupported_os.yml
   when: base_supported_os is not defined
 
 - name: setup the monitoring agent
   command: rackspace-monitoring-agent --setup --username {{ rackspace_username }} --apikey {{ rackspace_apikey }} creates=/etc/rackspace-monitoring-agent.cfg
-  when: not cloud_monitoring_agent_force_setup
-
-- name: force setup of the monitoring agent
-  command: rackspace-monitoring-agent --setup --username {{ rackspace_username }} --apikey {{ rackspace_apikey }}
-  when: cloud_monitoring_agent_force_setup
 
 - name: ensure agent is started
   service: name=rackspace-monitoring-agent state=started enabled=yes
@@ -25,5 +31,9 @@
 
 - name: configure checks and alarms
   template: src={{ item }}.yaml.j2 dest=/etc/rackspace-monitoring-agent.conf.d/{{ item }}.yaml owner=root group=root mode=0644
-  with_items: cloud_monitoring_default_checks| union(cloud_monitoring_additional_checks) | list
+  with_items:
+    - filesystem
+    - memory
+    - cpu
+    - load
   notify: restart monitoring agent
