@@ -1,0 +1,15 @@
+---
+- name: Provision remaining infra
+  hosts: local
+  connection: local
+  gather_facts: False
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+  vars_files:
+    - vars.yml
+  roles:
+    - { role: cloud-networks, tags: ['cloud-networks'] }
+    - { role: cloud-lb, tags: ['cloud-lb'] }
+    - { role: blueprint-image, tags: ['blueprint-image'] }
+    - { role: auto-scale, tags: ['auto-scale'] }
+    - { role: cloud-dns, tags: ['cloud-dns'] }
