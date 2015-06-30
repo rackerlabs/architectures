@@ -9,10 +9,13 @@
 
 - name: Disable default pool
   command: mv /etc/php5/fpm/pool.d/www.conf /etc/php5/fpm/pool.d/www.disabled creates=/etc/php5/fpm/pool.d/www.disabled
-  notify: restart php-fpm
+
+- name: Edit upstart
+  lineinfile: >
+    dest=/lib/systemd/system/php5-fpm.service
+    regexp="^ExecStartPre"
+    line="ExecStartPre=/bin/bash -ec 'while [ ! -d /mnt/gluster/wordpress ]; do sleep 1; done; /usr/lib/php5/php5-fpm-checkconf'"
 
 - name: Copy php-fpm configuration
   template: src=wordpress.conf dest=/etc/php5/fpm/pool.d
   notify: restart php-fpm
-
-- pause: seconds=5
