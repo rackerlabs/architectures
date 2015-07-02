@@ -1,14 +1,14 @@
 # API credentials
 username:
 api_key:
-region: IAD
+rs_region: IAD
 pyrax_creds_file: ~/.rackspace_cloud_credentials
 
 # Server config
 server_flavor: performance1-1
 server_image: 055143e8-2da9-439a-a52d-8063f845dec6 # Ubuntu 15.04 (PVHVM)
-server_keypair: ansible_prov_1
-server_name: magento_node
+server_keypair:
+node_name: magento_node
 
 # Redis config
 redis_flavor: performance1-8
@@ -17,11 +17,12 @@ redis_image: 055143e8-2da9-439a-a52d-8063f845dec6 # Ubuntu 15.04 (PVHVM)
 # Magento
 magento_version: 1.9.1.0
 sample_data: none  # set to 'none' or 'install'
+delete_sample_data: no # delete after installed
 
 # DB
-db_user: magento
-db_password: magento
-db_name: magento
+magento_db_user: magento
+magento_db_password: magento
+magento_db_name: magento
 db_instance_name: prod_db
 db_flavor: 3
 db_volume: 5
