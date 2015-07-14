@@ -1,0 +1,47 @@
+---
+- name: Generating random hashes
+  hosts: local
+  connection: local
+  gather_facts: False
+  vars_files:
+    - vars.yml
+  tasks:
+
+    - name: Generate random Redis key
+      shell: /usr/bin/openssl rand -base64 32
+      register: redis_key_result
+
+    - name: Provision Redis server
+      rax:
+        credentials: "{{ pyrax_creds_file }}"
+        region: "{{ rs_region }}"
+        name: redis
+        auto_increment: no
+        flavor: "{{ redis_flavor }}"
+        image: "{{ redis_image }}"
+        key_name: "{{ server_keypair }}"
+        wait: yes
+        count: 1
+        exact_count: yes
+        state: present
+        group: redis
+      register: rax_redis
+
+    - name: Add Redis server to host
+      add_host:
+        hostname: "{{ item.name }}"
+        ansible_ssh_host: "{{ item.rax_accessipv4 }}"
+        groupname: redis
+      with_items: rax_redis.success
+      when: rax_redis.action == 'create'
+
+- name: Deploy Redis
+  hosts: redis
+  remote_user: root
+  vars_files:
+    - vars.yml
+  vars:
+    - redis_password: "{{ hostvars.localhost.redis_key_result.stdout_lines[0] }}"
+    - redis_bind: 127.0.0.1
+  roles:
+    - { role: redis, tags: ['redis'] }
