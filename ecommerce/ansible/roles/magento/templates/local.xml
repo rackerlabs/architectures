@@ -41,9 +41,9 @@
             <default_setup>
                 <connection>
                     <host>{{ db_host }}</host>
-                    <username>{{ db_user }}</username>
-                    <password>{{ db_password}}</password>
-                    <dbname>{{ db_name }}</dbname>
+                    <username>{{ magento_db_user }}</username>
+                    <password>{{ magento_db_password}}</password>
+                    <dbname>{{ magento_db_name }}</dbname>
                     <initStatements>SET NAMES utf8</initStatements>
                     <model>mysql4</model>
                     <type>pdo_mysql</type>
@@ -78,7 +78,7 @@
         <routers>
             <adminhtml>
                 <args>
-                    <frontName></frontName>
+                    <frontName>admin</frontName>
                 </args>
             </adminhtml>
         </routers>

@@ -1,0 +1,61 @@
+---
+- name: Create scaling group
+  rax_scaling_group:
+    credentials: "{{ pyrax_creds_file }}"
+    region: "{{ rs_region }}"
+    cooldown: 60
+    flavor: "{{ server_flavor }}"
+    image: "{{ lookup('file', 'files/.img_id') }}"
+    min_entities: 2
+    max_entities: 10
+    name: "{{ autoscale_group_name }}"
+    server_name: "{{ node_name }}"
+    key_name: "{{ server_keypair }}"
+    meta:
+      group: "{{ autoscale_group_name }}"
+    networks:
+      - public
+      - private
+      - "{{ network.networks[0].id }}"
+    loadbalancers:
+      - id: "{{ hostvars.localhost.clb.balancer.id }}"
+        port: "{{ hostvars.localhost.clb.balancer.port|int }}"
+    # wait: yes
+    # wait_timeout: 500
+  register: asg
+  tags: web_nodes
+
+- name: Create up scaling policy
+  rax_scaling_policy:
+    credentials: "{{ pyrax_creds_file }}"
+    region: "{{ rs_region }}"
+    cooldown: 60
+    change: 1
+    name: up
+    scaling_group: "{{ autoscale_group_name }}"
+    policy_type: webhook
+    state: present
+  register: sg_up
+  tags: web_nodes
+
+- name: Create down scaling policy
+  rax_scaling_policy:
+    credentials: "{{ pyrax_creds_file }}"
+    region: "{{ rs_region }}"
+    cooldown: 60
+    change: -1
+    name: down
+    scaling_group: "{{ autoscale_group_name }}"
+    policy_type: webhook
+    state: present
+  register: sg_down
+  tags: web_nodes
+
+- name: Create webhooks for policies, then associate with notifications
+  command: >
+    python files/setup_monitoring.py
+      --group {{ asg.autoscale_group.id }}
+      --up {{ sg_up.autoscale_policy.id }}
+      --down {{ sg_down.autoscale_policy.id }}
+  when: sg_up.changed == True and sg_down.changed == True
+  tags: web_nodes

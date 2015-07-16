@@ -1,0 +1,10 @@
+---
+- name: Create assets container
+  rax_files:
+    container: "{{ container_name }}"
+    public: yes
+    ttl: "{{ container_ttl }}"
+    region: "{{ rs_region }}"
+    credentials: "{{ pyrax_creds_file }}"
+
+#- name: Create CDN rules

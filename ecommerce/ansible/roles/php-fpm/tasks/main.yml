@@ -4,14 +4,21 @@
   with_items:
     - php5
     - php5-fpm
-    - php5-curl
     - php5-mysql
-    - php5-mcrypt
     - php5-gd
+    - php5-mcrypt
+    - php5-curl
+
+- command: php5enmod mcrypt
 
 - name: Disable default pool
   command: mv /etc/php5/fpm/pool.d/www.conf /etc/php5/fpm/pool.d/www.disabled creates=/etc/php5/fpm/pool.d/www.disabled
-  notify: restart php-fpm
+
+- name: Edit upstart
+  lineinfile: >
+    dest=/lib/systemd/system/php5-fpm.service
+    regexp="^ExecStartPre"
+    line="ExecStartPre=/bin/bash -ec 'while [ ! -d /mnt/gluster/magento ]; do sleep 1; done; /usr/lib/php5/php5-fpm-checkconf'"
 
 - name: Copy php-fpm configuration
   template: src=magento.conf dest=/etc/php5/fpm/pool.d

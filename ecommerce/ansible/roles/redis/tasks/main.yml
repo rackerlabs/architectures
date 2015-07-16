@@ -1,11 +1,10 @@
 ---
-- include: install.yml
-- include: server.yml
-  when: not redis_sentinel
-  tags:
-    - config
-- include: sentinel.yml
-  when: redis_sentinel
-  tags:
-    - config
-- include: local_facts.yml
+- name: install dependencies
+  apt: name=redis-server update_cache=yes cache_valid_time=86400 state=present
+
+- name: create redis config file
+  template: src=redis.conf.j2 dest=/etc/redis/redis.conf owner={{ redis_user }}
+  notify: restart redis
+
+- name: flush handlers to apply config changes
+  meta: flush_handlers

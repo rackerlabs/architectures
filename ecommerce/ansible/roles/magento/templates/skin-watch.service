@@ -1,0 +1,6 @@
+[Unit]
+Description=Syncs media files with Rackspace CDN
+
+[Service]
+ExecStart=/bin/bash /srv/skin.sh
+Restart=always

@@ -1,5 +1,5 @@
 [local]
-localhost ansible_connection=local 
+localhost ansible_connection=local ansible_python_interpreter=~/.venvs/refarch/bin/python
 
 [all:vars]
 ansible_ssh_user=root

@@ -1,0 +1,32 @@
+---
+- name: Create DB instance
+  rax_cdb:
+    credentials: "{{ pyrax_creds_file }}"
+    name: "{{ db_instance_name }}"
+    flavor: "{{ db_flavor }}"
+    volume: "{{ db_volume }}"
+    state: present
+    wait: yes
+    region: "{{ rs_region }}"
+  register: cdb
+  tags: database
+
+- name: Create DB
+  rax_cdb_database:
+    credentials: "{{ pyrax_creds_file }}"
+    region: "{{ rs_region }}"
+    cdb_id: "{{ cdb.cdb.id }}"
+    name: "{{ magento_db_name }}"
+  tags: database
+
+- name: Create DB user
+  rax_cdb_user:
+    credentials: "{{ pyrax_creds_file }}"
+    region: "{{ rs_region }}"
+    cdb_id: "{{ cdb.cdb.id }}"
+    db_username: "{{ magento_db_user }}"
+    db_password: "{{ magento_db_password }}"
+    databases: ["{{ magento_db_name }}"]
+  tags: database
+
+# - name: Set up replication

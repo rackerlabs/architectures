@@ -1,0 +1,28 @@
+---
+- name: Provision server
+  rax:
+    credentials: "{{ pyrax_creds_file }}"
+    region: "{{ rs_region }}"
+    name: blueprint
+    auto_increment: no
+    count: 1
+    exact_count: yes
+    flavor: performance1-8
+    image: "{{ server_image }}"
+    key_name: "{{ server_keypair }}"
+    networks:
+      - public
+      - private
+      - "{{ network.networks[0].id }}"
+    wait: yes
+    state: present
+    group: blueprint
+  register: rax_blueprint
+
+- name: Add server to host
+  add_host:
+    hostname: "{{ item.name }}"
+    ansible_ssh_host: "{{ item.rax_accessipv4 }}"
+    groupname: blueprint
+  with_items: rax_blueprint.success
+  when: rax_blueprint.action == 'create'

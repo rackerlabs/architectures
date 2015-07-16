@@ -1,0 +1,26 @@
+---
+- name: Add DNS domain
+  rax_dns:
+    name: "{{ dns_domain }}"
+    email: "{{ dns_email }}"
+    credentials: "{{ pyrax_creds_file }}"
+  when: dns_domain is defined
+  tags: dns
+
+- name: Add A-record
+  rax_dns_record:
+    credentials: "{{ pyrax_creds_file }}"
+    domain: "{{ dns_domain }}"
+    name: "{{ dns_domain }}"
+    data: "{{ hostvars.localhost.clb.balancer.virtual_ips[0].address }}"
+    type: A
+  when: dns_domain is defined
+
+- name: Add admin CNAME
+  rax_dns_record:
+    credentials: "{{ pyrax_creds_file }}"
+    domain: "{{ dns_domain }}"
+    name: "admin.{{ dns_domain }}"
+    data: "{{ hostvars.localhost.rax_admin.instances[0].rax_accessipv4 }}"
+    type: CNAME
+  when: dns_domain is defined

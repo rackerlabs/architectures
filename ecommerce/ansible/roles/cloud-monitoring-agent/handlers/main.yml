@@ -1,0 +1,4 @@
+---
+# handlers file for cloud-monitoring-agent
+- name: restart monitoring agent
+  service: name=rackspace-monitoring-agent state=restarted

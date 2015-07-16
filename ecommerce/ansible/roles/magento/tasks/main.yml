@@ -5,48 +5,96 @@
     - git
     - python-dev
     - python-setuptools
+    - inotify-tools
+    - mysql-client-core-5.6
+
+- set_fact: install_root=/srv
 
 - name: Clone Turbolift repository
-  command: git clone git://github.com/cloudnull/turbolift.git
+  git: version=615f98196d3fed55f923bae5cbba642d3dab5676 repo=git://github.com/cloudnull/turbolift.git dest=/root/turbolift accept_hostkey=True
 
 - name: Install Turbolift
   command: chdir=/root/turbolift python setup.py install
 
 - name: Download Magento
-  get_url: url=https://www.magentocommerce.com/downloads/assets/{{ magento_version }}/magento-{{ magento_version }}.tar.gz dest=/srv/magento-{{ magento_version }}.tar.gz
+  get_url: url=https://www.magentocommerce.com/downloads/assets/{{ magento_version }}/magento-{{ magento_version }}.tar.gz dest={{ install_root }}/magento-{{ magento_version }}.tar.gz
+
+- stat: path={{ install_root }}/magento-sample-data-{{ magento_version }}.tar.gz
+  register: sd_file
 
 - name: Download Sample
-  get_url: url=http://www.magentocommerce.com/downloads/assets/{{ magento_version }}/magento-sample-data-{{ magento_version }}.tar.gz dest=/srv/magento-sample-data-{{ magento_version }}.tar.gz
-  when: sample_data == 'install'
+  get_url: url=https://www.magentocommerce.com/downloads/assets/{{ magento_version }}/magento-sample-data-{{ magento_version }}.tar.gz dest={{ install_root }}/magento-sample-data-{{ magento_version }}.tar.gz
+  when: sample_data == 'install' and is_admin == True and sd_file.stat.exists == False
 
 - name: Extract Magento archive
-  command: chdir=/srv /bin/tar xvf magento-{{ magento_version }}.tar.gz creates=/srv/magento
+  command: chdir={{ install_root }} /bin/tar xvf magento-{{ magento_version }}.tar.gz creates={{ install_root }}/magento
+  ignore_errors: yes
+
+- stat: path={{ install_root }}/magento-sample-data-{{ magento_version }}.tar.gz
+  register: sd_file
 
 - name: Extract Sample archive
-  command: chdir=/srv /bin/tar xvf magento-sample-data-{{ magento_version }}.tar.gz creates=/srv/magento-sample-data-{{ magento_version }}
-  when: sample_data == 'install'
+  command: chdir={{ install_root }} /bin/tar xvf magento-sample-data-{{ magento_version }}.tar.gz creates={{ install_root }}/magento-sample-data-{{ magento_version }}
+  when: sd_file.stat.exists == True and sample_data == 'install' and is_admin == True
 
-- name: Move media directory to Cloud Files
-  command: >
-    chdir=/srv/magento-sample-data-{{ magento_version }}/media
-    turbolift -u {{ username }} -a {{ api_key }} --os-rax-auth {{ region|lowercase }} upload -s . -c media
-  when: sample_data == 'install'
+- stat: path={{ install_root }}/magento-sample-data-{{ magento_version }}
+  register: sd_dir
 
-- name: Move skin directory to Cloud Files
-  command: >
-    chdir=/srv/magento-sample-data-{{ magento_version }}/skin
-    turbolift -u {{ username }} -a {{ api_key }} --os-rax-auth {{ region|lowercase }} upload -s . -c skin
-  when: sample_data == 'install'
+- shell: cp -rf {{ install_root }}/magento-sample-data-{{ magento_version }}/media/* {{ install_root }}/magento/media
+  when: sd_dir.stat.exists == True and sample_data == 'install' and is_admin == True
+
+- shell: cp -rf {{ install_root }}/magento-sample-data-{{ magento_version }}/skin/* {{ install_root }}/magento/skin
+  when: sd_dir.stat.exists == True and sample_data == 'install' and is_admin == True
 
 - name: Import SQLdump
-  shell: mysql -u {{ db_user }} -p{{ db_password }} -h {{ db_host }} {{ db_name }} < /srv/magento-sample-data-{{ magento_version }}/magento_sample_data_for_{{ magento_version }}.sql
-  when: sample_data == 'install'
+  shell: mysql -u {{ magento_db_user }} -p{{ magento_db_password }} -h {{ db_host }} {{ magento_db_name }} < {{ install_root }}/magento-sample-data-{{ magento_version }}/magento_sample_data_for_{{ magento_version }}.sql
+  when: sd_dir.stat.exists == True and sample_data == 'install' and is_admin == True
 
-- name: Remove samples
-  shell: chdir=/srv rm -rf magento-sample-data-{{ magento_version }}*
+# - name: Remove samples
+#   shell: rm -rf {{ install_root }}/magento-sample-data-{{ magento_version }}*
+#   when: sd_dir.stat.exists == True and delete_sample_data == yes and is_admin == True
+
+- name: Move media directory to Cloud Files
+  template: src=media.sh dest={{ install_root }}
+
+- name: Move skin directory to Cloud Files
+  template: src=skin.sh dest={{ install_root }}
+
+- name: Setup media systemd
+  template: src=media-watch.service dest=/etc/systemd/system
+
+- name: Setup skin systemd
+  template: src=skin-watch.service dest=/etc/systemd/system
 
 - name: Copy Magento config file
-  template: src=local.xml dest=/srv/magento/app/etc
+  template: src=local.xml dest={{ install_root }}/magento/app/etc
 
 - name: Change ownership of directory
-  file: path=/srv/magento owner=www-data group=www-data state=directory recurse=yes
+  file: path={{ install_root }}/magento owner=www-data group=www-data state=directory recurse=yes
+
+- command: systemctl daemon-reload
+- command: systemctl start media-watch
+- command: systemctl start skin-watch
+
+- command: mkdir -p /mnt/gluster/magento/media
+  when: is_admin == True
+
+- command: mkdir -p /mnt/gluster/magento/skin
+  when: is_admin == True
+
+- cron: name="sync media dir with gluster mount" job="rsync -ac --delete /srv/magento/media/ /mnt/gluster/magento/media/"
+  when: is_admin == True
+
+- cron: name="sync media dir with gluster mount" job="rsync -ac --delete /mnt/gluster/magento/media/ /srv/magento/media/"
+  when: is_admin == False
+
+- cron: name="sync skin dir with gluster mount" job="rsync -ac --delete /srv/magento/skin/ /mnt/gluster/magento/skin/"
+  when: is_admin == True
+
+- cron: name="sync skin dir with gluster mount" job="rsync -ac --delete /mnt/gluster/magento/skin/ /srv/magento/skin/"
+  when: is_admin == False
+
+- template: src=admin-user.sql dest={{ install_root }}/admin-user.sql
+
+- shell: mysql -u {{ magento_db_user }} -p{{ magento_db_password }} -h {{ db_host }} {{ magento_db_name }} < {{ install_root }}/admin-user.sql
+  when: is_admin == True

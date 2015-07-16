@@ -1,10 +1,84 @@
 ---
-- name: Deploy web architecture
+- name: Provision private network
   hosts: local
   connection: local
   gather_facts: False
+  environment:
+    DEBIAN_FRONTEND: noninteractive
   vars_files:
     - vars.yml
   roles:
-    - blueprint-image
-    - arch-deploy
+    - { role: cloud-networks, tags: ['cloud-networks'] }
+
+- { include: glusterfs.yml, tags: ['gluster-servers'] }
+
+- name: Provision remaining cloud resources
+  hosts: local
+  connection: local
+  gather_facts: False
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+  vars_files:
+    - vars.yml
+  roles:
+    - { role: cloud-files, tags: ['cloud-files'] }
+    - { role: cloud-lb, tags: ['cloud-lb'] }
+    - { role: blueprint-deploy, tags: ['blueprint-deploy'] }
+    - { role: admin-deploy, tags: ['admin-deploy'] }
+    - { role: cloud-databases, tags: ['cloud-databases'] }
+
+- { include: redis.yml, tags: ['redis'] }
+
+- name: Generating random hashes
+  hosts: local
+  connection: local
+  gather_facts: False
+  tasks:
+
+    - name: Generate random Magento key
+      shell: /usr/bin/openssl rand -base64 32
+      register: magento_key_result
+
+- name: Configure admin server
+  hosts: admin
+  remote_user: root
+  vars_files:
+    - vars.yml
+  vars:
+    - server_hostname: "{{ hostvars.localhost.rax_admin.instances[0].rax_accessipv4 }}"
+    - magento_key: "{{ hostvars.localhost.magento_key_result.stdout_lines[0] }}"
+    - gluster_servers: "{{ hostvars.localhost.gluster_servers }}"
+    - db_host: "{{ hostvars.localhost.cdb.cdb.hostname }}"
+    - rackspace_username: "{{ username }}"
+    - rackspace_apikey: "{{ api_key }}"
+    - notification_plan_id: "{{ lookup('file', 'files/.np_id') }}"
+    - redis_ip: "{{ hostvars.localhost.rax_redis.instances[0].rax_accessipv4 }}"
+    - redis_password: "{{ hostvars.localhost.redis_key_result.stdout_lines[0] }}"
+  roles:
+    - { role: cloud-monitoring-agent, tags: ['admin-configure', 'cloud-monitoring'] }
+    - { role: gluster-client, tags: ['admin-configure', 'gluster-client'] }
+    - { role: nginx, tags: ['admin-configure', 'nginx'] }
+    - { role: php-fpm, tags: ['admin-configure', 'php-fpm'] }
+    - { role: magento, tags: ['admin-configure', 'magento'], is_admin: True }
+
+- name: Configure blueprint server
+  hosts: blueprint
+  remote_user: root
+  vars_files:
+    - vars.yml
+  vars:
+    - server_hostname: "{{ hostvars.localhost.rax_blueprint.instances[0].rax_accessipv4 }}"
+    - magento_key: "{{ hostvars.localhost.magento_key_result.stdout_lines[0] }}"
+    - gluster_servers: "{{ hostvars.localhost.gluster_servers }}"
+    - db_host: "{{ hostvars.localhost.cdb.cdb.hostname }}"
+    - rackspace_username: "{{ username }}"
+    - rackspace_apikey: "{{ api_key }}"
+    - notification_plan_id: "{{ lookup('file', 'files/.np_id') }}"
+    - redis_ip: "{{ hostvars.localhost.rax_redis.instances[0].rax_accessipv4 }}"
+    - redis_password: "{{ hostvars.localhost.redis_key_result.stdout_lines[0] }}"
+  roles:
+    - { role: cloud-monitoring-agent, tags: ['blueprint-configure', 'cloud-monitoring'] }
+    - { role: gluster-client, tags: ['blueprint-configure', 'gluster-client'] }
+    - { role: nginx, tags: ['blueprint-configure', 'nginx'] }
+    - { role: php-fpm, tags: ['blueprint-configure', 'php-fpm'] }
+    - { role: magento, tags: ['blueprint-configure', 'magento'], is_admin: False }

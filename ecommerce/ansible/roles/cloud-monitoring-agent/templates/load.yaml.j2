@@ -3,7 +3,6 @@ label: Load Average
 disabled: false
 period: {{ cloud_monitoring_load_period | default(60) }}
 timeout: {{ cloud_monitoring_load_timeout | default(30) }}
-{% if cloud_monitoring_load_alarm == True %}
 alarms:
     alarm-load-average:
         label: High Load Average
@@ -16,4 +15,3 @@ alarms:
               return new AlarmStatus(WARNING, '5 minute load average is #{5m}, above your warning threshold of 2');
             }
             return new AlarmStatus(OK, '5 minute load average is #{5m}, below your warning threshold of 2');
-{% endif %}

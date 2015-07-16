@@ -1,0 +1,9 @@
+---
+- name: Create private network
+  rax_network:
+    credentials: "{{ pyrax_creds_file }}"
+    label: magento_gluster_nodes
+    state: present
+    cidr: 192.168.3.0/24
+    region: "{{ rs_region }}"
+  register: network

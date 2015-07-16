@@ -1,20 +1,27 @@
 ---
-# tasks file for cloud-monitoring-agent
-- include: Debian.yml
-  when: ansible_os_family == 'Debian'
+- name: setup monitoring agent apt key
+  apt_key: id=D05AB914 url='https://monitoring.api.rackspacecloud.com/pki/agent/linux.asc' state=present
 
-- include: RedHat.yml
-  when: ansible_os_family == 'RedHat'
+- name: setup monitoring agent apt repository
+  apt_repository: repo='deb http://stable.packages.cloudmonitoring.rackspace.com/{{ ansible_distribution | lower }}-{{ ansible_distribution_version }}-x86_64 cloudmonitoring main' state=present
 
-- include: unsupported_os.yml
-  when: base_supported_os is not defined
+- name: install monitoring agent
+  apt: name=rackspace-monitoring-agent state=present update_cache=yes cache_valid_time=86400
+
+- name: setup the monitoring agent
+  command: rackspace-monitoring-agent --setup --username {{ rackspace_username }} --apikey {{ rackspace_apikey }} creates=/etc/rackspace-monitoring-agent.cfg
+
+- name: ensure agent is started
+  service: name=rackspace-monitoring-agent state=started enabled=yes
 
 - name: ensure the conf.d directory exists
   file: path=/etc/rackspace-monitoring-agent.conf.d state=directory owner=root group=root mode=0755
 
 - name: configure checks and alarms
   template: src={{ item }}.yaml.j2 dest=/etc/rackspace-monitoring-agent.conf.d/{{ item }}.yaml owner=root group=root mode=0644
-  with_items: cloud_monitoring_default_checks| union(cloud_monitoring_additional_checks) | list
-
-- name: Move startup script
-  template: src=agent.conf dest=/etc/init/rax_agent.conf owner=root group=root
+  with_items:
+    - filesystem
+    - memory
+    - cpu
+    - load
+  notify: restart monitoring agent
